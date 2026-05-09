@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login | BookMyTaxi Cabs</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { background: var(--light-grey); display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; overflow-y: auto; }
+        .auth-card { background: var(--white); width: 100%; max-width: 400px; padding: 40px; border-radius: 20px; box-shadow: var(--shadow); }
+        .auth-header { text-align: center; margin-bottom: 30px; }
+        .auth-header img { height: 40px; margin-bottom: 16px; }
+        .auth-header h1 { font-size: 24px; font-weight: 800; }
+        .auth-form .input-group { margin-bottom: 20px; }
+        .auth-form label { display: block; font-size: 12px; font-weight: 700; color: var(--text-muted); margin-bottom: 8px; text-transform: uppercase; }
+        .auth-form input { width: 100%; padding: 14px 16px; border-radius: var(--radius); border: 1px solid var(--border-color); background: var(--light-grey); font-size: 16px; outline: none; transition: border-color 0.3s; }
+        .auth-form input:focus { border-color: var(--primary); }
+        .auth-btn { width: 100%; padding: 16px; border-radius: var(--radius); border: none; background: var(--dark); color: var(--white); font-size: 16px; font-weight: 700; cursor: pointer; transition: background 0.3s; }
+        .auth-btn:hover { background: #333; }
+        .auth-toggle { text-align: center; margin-top: 24px; font-size: 14px; color: var(--text-muted); }
+        .auth-toggle a { color: var(--dark); font-weight: 700; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <div class="auth-card">
+        <header class="auth-header">
+            <img src="assets/logo-black.png" alt="BookMyTaxi Logo">
+            <h1 id="auth-title">Login to BookMyTaxi</h1>
+        </header>
+
+        <form id="auth-form" class="auth-form">
+            <div class="input-group" id="name-group" style="display: none;">
+                <label for="name">Full Name</label>
+                <input type="text" id="name" placeholder="John Doe">
+            </div>
+            <div class="input-group">
+                <label for="phone">Phone Number</label>
+                <input type="tel" id="phone" placeholder="9876543210" required>
+            </div>
+            <div class="input-group" id="email-group" style="display: none;">
+                <label for="email">Email Address</label>
+                <input type="email" id="email" placeholder="john@example.com">
+            </div>
+            <div class="input-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" placeholder="••••••••" required>
+            </div>
+            <button type="submit" class="auth-btn" id="submit-btn">Login</button>
+        </form>
+
+        <div class="auth-toggle">
+            <span id="toggle-text">New to BookMyTaxi?</span>
+            <a href="#" id="toggle-auth">Create an account</a>
+        </div>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script>
+        const authForm = document.getElementById('auth-form');
+        const authTitle = document.getElementById('auth-title');
+        const submitBtn = document.getElementById('submit-btn');
+        const toggleAuth = document.getElementById('toggle-auth');
+        const toggleText = document.getElementById('toggle-text');
+        const nameGroup = document.getElementById('name-group');
+        const emailGroup = document.getElementById('email-group');
+
+        let isLogin = true;
+
+        toggleAuth.addEventListener('click', (e) => {
+            e.preventDefault();
+            isLogin = !isLogin;
+            authTitle.textContent = isLogin ? 'Login to BookMyTaxi' : 'Join BookMyTaxi';
+            submitBtn.textContent = isLogin ? 'Login' : 'Sign Up';
+            toggleText.textContent = isLogin ? 'New to BookMyTaxi?' : 'Already have an account?';
+            toggleAuth.textContent = isLogin ? 'Create an account' : 'Login';
+            nameGroup.style.display = isLogin ? 'none' : 'block';
+            emailGroup.style.display = isLogin ? 'none' : 'block';
+        });
+
+        authForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register';
+            const payload = {
+                phone: document.getElementById('phone').value,
+                password: document.getElementById('password').value
+            };
+            if (!isLogin) {
+                payload.name = document.getElementById('name').value;
+                payload.email = document.getElementById('email').value;
+            }
+
+            try {
+                const res = await fetch(`${API_BASE_URL}${endpoint}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (data.success) {
+                    if (isLogin) {
+                        localStorage.setItem('cityride_member', JSON.stringify(data.user));
+                        window.location.href = 'index.html';
+                    } else {
+                        alert('Registration successful! Please login.');
+                        location.reload();
+                    }
+                } else {
+                    alert(data.error || 'Authentication failed.');
+                }
+            } catch (err) {
+                alert('Network error.');
+            }
+        });
+    </script>
+</body>
+</html>

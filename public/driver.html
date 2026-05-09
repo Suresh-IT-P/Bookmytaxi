@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Driver Panel | BookMyTaxi Cabs</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body { background: #f8f9fa; color: #333; overflow-y: auto; }
+        .dashboard { max-width: 1200px; margin: 40px auto; padding: 20px; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 24px; margin-bottom: 40px; }
+        .stat-card { background: white; padding: 24px; border-radius: 16px; box-shadow: var(--shadow); border-left: 4px solid var(--primary); }
+        .stat-card h3 { font-size: 14px; color: var(--text-muted); margin-bottom: 8px; text-transform: uppercase; }
+        .stat-card .value { font-size: 32px; font-weight: 800; }
+        
+        .main-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 40px; }
+        .jobs-section h2 { margin-bottom: 24px; font-weight: 800; }
+        .job-card { background: white; padding: 24px; border-radius: 16px; box-shadow: var(--shadow); margin-bottom: 20px; transition: transform 0.3s; }
+        .job-card:hover { transform: translateY(-5px); }
+        .job-header { display: flex; justify-content: space-between; margin-bottom: 16px; }
+        .job-type { background: var(--light-grey); padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; }
+        .job-fare { font-size: 20px; font-weight: 800; color: var(--accent-green); }
+        .job-locations { margin-bottom: 20px; }
+        .loc-item { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; font-size: 14px; }
+        .accept-btn { width: 100%; padding: 12px; border-radius: 8px; border: none; background: var(--dark); color: white; font-weight: 700; cursor: pointer; }
+        
+        .active-mission { background: var(--dark); color: white; padding: 30px; border-radius: 24px; margin-bottom: 40px; }
+        .active-mission h2 { color: var(--primary); margin-bottom: 20px; }
+        #mission-map { height: 300px; border-radius: 16px; margin-bottom: 20px; background: #222; }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px;">
+            <div>
+                <h1 id="driver-name">Welcome, Captain</h1>
+                <p id="car-info">Vehicle: Loading...</p>
+            </div>
+            <div style="text-align: right;">
+                <button onclick="logout()" class="btn btn-secondary">Logout</button>
+            </div>
+        </header>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>Wallet Balance</h3>
+                <div class="value" id="wallet-balance">₹0.00</div>
+            </div>
+            <div class="stat-card">
+                <h3>Current Status</h3>
+                <div class="value" style="color: var(--accent-green);">Online</div>
+                <p style="font-size:10px; color:#999; margin-top:5px;">Always active for rides</p>
+            </div>
+        </div>
+
+        <div id="active-mission-container" class="hidden">
+            <div class="active-mission">
+                <h2>Active Mission</h2>
+                <div id="mission-map"></div>
+                <div id="active-details">
+                    <!-- Dynamic -->
+                </div>
+            </div>
+        </div>
+
+        <div class="main-grid">
+            <div class="jobs-section">
+                <h2>Available Rides</h2>
+                <div id="available-jobs">
+                    <p class="placeholder-text">Searching for rides nearby...</p>
+                </div>
+            </div>
+            <div class="history-section">
+                <h2>Recent Trips</h2>
+                <div id="my-jobs">
+                    <!-- Dynamic -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="js/config.js"></script>
+    <script>
+        const driver = JSON.parse(localStorage.getItem('cityride_pilot'));
+        if (!driver) window.location.href = 'driver-login.html';
+
+        document.getElementById('driver-name').textContent = `Welcome, ${driver.name}`;
+        document.getElementById('car-info').textContent = `${driver.car_model} | ${driver.car_number} (${driver.vehicle_type || '---'})`;
+
+        let isOnline = false;
+
+        async function loadData() {
+            try {
+                // Info
+                const infoRes = await fetch(`${API_BASE_URL}/api/driver/info/${driver.id}`);
+                const infoData = await infoRes.json();
+                if (infoData.success) {
+                    const d = infoData.driver;
+                    document.getElementById('wallet-balance').textContent = `₹${parseFloat(d.wallet_balance).toFixed(2)}`;
+                    document.getElementById('car-info').textContent = `${d.car_model} | ${d.car_number} (${d.vehicle_type.toUpperCase()})`;
+                }
+
+                // Available
+                const jobsRes = await fetch(`${API_BASE_URL}/api/driver/jobs/${driver.id}`);
+                const jobs = await jobsRes.json();
+                renderAvailable(jobs);
+
+                // My Jobs
+                const myJobsRes = await fetch(`${API_BASE_URL}/api/driver/my-jobs/${driver.id}`);
+                const myJobs = await myJobsRes.json();
+                renderMyJobs(myJobs);
+            } catch (err) {}
+        }
+
+        function renderAvailable(jobs) {
+            const container = document.getElementById('available-jobs');
+            container.innerHTML = '';
+            if (!jobs.length) {
+                container.innerHTML = '<p class="placeholder-text">No rides available right now.</p>';
+                return;
+            }
+            jobs.forEach(job => {
+                const card = document.createElement('div');
+                card.className = 'job-card';
+                card.innerHTML = `
+                    <div class="job-header">
+                        <span class="job-type">${job.trip_type}</span>
+                        <span class="job-fare">${job.fare}</span>
+                    </div>
+                    <div class="job-locations">
+                        <div class="loc-item"><div class="dot-green"></div> ${job.pickup_loc}</div>
+                        <div class="loc-item"><div class="dot-red"></div> ${job.drop_loc}</div>
+                    </div>
+                    <button class="accept-btn" onclick="acceptJob(${job.id})">Accept Ride</button>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function renderMyJobs(jobs) {
+            const container = document.getElementById('my-jobs');
+            container.innerHTML = '';
+            const active = jobs.find(j => ['assigned', 'ongoing', 'finished'].includes(j.status));
+            if (active) {
+                document.getElementById('active-mission-container').classList.remove('hidden');
+                initMissionMap(active);
+                const isOngoing = active.status === 'ongoing';
+                document.getElementById('active-details').innerHTML = `
+                    <div style="display:flex; flex-direction:column; gap:15px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <div>
+                                <p><b>Passenger:</b> ${active.customer_name}</p>
+                                <p><b>Status:</b> <span style="color:var(--primary); text-transform:uppercase; font-weight:700;">${active.status}</span></p>
+                                <p><b>OTP:</b> <span style="font-size:24px; color:var(--primary); font-weight:800;">${active.journey_otp || '----'}</span></p>
+                            </div>
+                            <div style="text-align:right;">
+                                <input type="number" id="odo-input" placeholder="${isOngoing ? 'End Odometer' : 'Start Odometer'}" style="width:140px; padding:12px; border-radius:8px; border:1px solid #444; background:#222; color:white; margin-bottom:10px; display:block;">
+                                ${isOngoing ? `
+                                    <input type="text" id="otp-input" placeholder="Enter OTP" style="width:140px; padding:12px; border-radius:8px; border:1px solid #444; background:#222; color:white; margin-bottom:10px; display:block;">
+                                    <button class="btn btn-primary" style="background:var(--accent-green); height:45px; width:140px;" onclick="finishTrip(${active.id})">Finish Trip</button>
+                                ` : `
+                                    <button class="btn btn-primary" style="height:45px; width:140px;" onclick="startTrip(${active.id})">Start Trip</button>
+                                `}
+                            </div>
+                        </div>
+                        <div style="display:flex; gap:10px;">
+                            <a href="https://www.google.com/maps/dir/?api=1&destination=${active.pickup_coords.split(',').reverse().join(',')}" target="_blank" class="btn btn-secondary" style="flex:1; text-align:center; padding:12px; background:#444; color:white; border-radius:8px; text-decoration:none; font-size:13px;">Navigate to Pickup</a>
+                            <a href="https://www.google.com/maps/dir/?api=1&origin=${active.pickup_coords.split(',').reverse().join(',')}&destination=${active.drop_coords.split(',').reverse().join(',')}" target="_blank" class="btn btn-secondary" style="flex:1; text-align:center; padding:12px; background:#444; color:white; border-radius:8px; text-decoration:none; font-size:13px;">Route to Drop</a>
+                        </div>
+                    </div>
+                `;
+            } else {
+                document.getElementById('active-mission-container').classList.add('hidden');
+            }
+
+            if (!jobs.length) {
+                container.innerHTML = '<p class="placeholder-text" style="font-size:12px; color:#999; text-align:center; padding:20px;">No completed trips yet.</p>';
+            }
+
+            jobs.slice(0, 5).forEach(job => {
+                const item = document.createElement('div');
+                item.style.padding = '15px';
+                item.style.borderBottom = '1px solid #eee';
+                item.innerHTML = `
+                    <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                        <span style="font-size:12px; font-weight:700;">#B${job.id}</span>
+                        <span style="font-size:11px; font-weight:800; color:var(--accent-green);">${job.fare}</span>
+                    </div>
+                    <div style="font-size:12px; color:#333; margin-bottom:4px;">${job.pickup_loc.substring(0, 40)}...</div>
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span style="font-size:10px; color:#999; text-transform:uppercase;">${job.trip_type}</span>
+                        <span style="font-size:10px; font-weight:700; color:var(--primary);">${job.status.toUpperCase()}</span>
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        let missionMap = null;
+        let missionMarkers = [];
+
+        function initMissionMap(booking) {
+            const container = document.getElementById('mission-map');
+            if (!booking || !booking.pickup_coords || !booking.drop_coords) return;
+
+            const [pLat, pLng] = booking.pickup_coords.split(',').map(Number);
+            const [dLat, dLng] = booking.drop_coords.split(',').map(Number);
+
+            if (!missionMap) {
+                missionMap = L.map('mission-map').setView([pLat, pLng], 13);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap contributors'
+                }).addTo(missionMap);
+            }
+
+            // Clear old markers
+            missionMarkers.forEach(m => missionMap.removeLayer(m));
+            missionMarkers = [];
+
+            // Add markers
+            const pMarker = L.marker([pLat, pLng]).addTo(missionMap).bindPopup('Pickup: ' + booking.pickup_loc);
+            const dMarker = L.marker([dLat, dLng]).addTo(missionMap).bindPopup('Drop: ' + booking.drop_loc);
+            
+            missionMarkers.push(pMarker, dMarker);
+
+            // Fit bounds
+            const bounds = L.latLngBounds([[pLat, pLng], [dLat, dLng]]);
+            missionMap.fitBounds(bounds, { padding: [50, 50] });
+            
+            // Draw line
+            const polyline = L.polyline([[pLat, pLng], [dLat, dLng]], { color: 'var(--primary)', weight: 3, dashArray: '5, 10' }).addTo(missionMap);
+            missionMarkers.push(polyline);
+            
+            // Fix map size if it was hidden
+            setTimeout(() => missionMap.invalidateSize(), 200);
+        }
+
+        async function acceptJob(id) {
+            const res = await fetch(`${API_BASE_URL}/api/bookings/accept`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ bookingId: id, driverId: driver.id })
+            });
+            if (res.ok) {
+                alert('Job Accepted!');
+                loadData();
+            } else {
+                const data = await res.json();
+                alert(data.error || 'Failed to accept job.');
+            }
+        }
+
+        async function startTrip(id) {
+            const odo = document.getElementById('odo-input').value;
+            if (!odo) return alert('Please enter starting odometer reading');
+            const res = await fetch(`${API_BASE_URL}/api/bookings/update-status`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ bookingId: id, status: 'ongoing', odometer: odo })
+            });
+            if (res.ok) {
+                alert('Trip Started!');
+                loadData();
+            } else {
+                const data = await res.json();
+                alert(data.error || 'Failed to start trip.');
+            }
+        }
+
+        async function finishTrip(id) {
+            const odo = document.getElementById('odo-input').value;
+            const otp = document.getElementById('otp-input').value;
+            if (!odo) return alert('Please enter final odometer reading');
+            if (!otp) return alert('Please enter passenger OTP');
+
+            const res = await fetch(`${API_BASE_URL}/api/bookings/update-status`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ bookingId: id, status: 'completed', otp: otp, odometer: odo })
+            });
+            if (res.ok) {
+                alert('Trip Completed!');
+                loadData();
+            } else {
+                const data = await res.json();
+                alert(data.error || 'Invalid OTP or data.');
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('cityride_pilot');
+            window.location.href = 'driver-login.html';
+        }
+
+        loadData();
+        setInterval(loadData, 10000);
+    </script>
+</body>
+</html>

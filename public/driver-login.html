@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Driver Login | BookMyTaxi Cabs</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { background: var(--light-grey); display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; overflow-y: auto; color: white; }
+        .auth-card { background: var(--dark-grey); width: 100%; max-width: 400px; padding: 40px; border-radius: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.5); }
+        .auth-header { text-align: center; margin-bottom: 30px; }
+        .auth-header h1 { font-size: 24px; font-weight: 800; color: var(--primary); }
+        .auth-form .input-group { margin-bottom: 20px; }
+        .auth-form label { display: block; font-size: 12px; font-weight: 700; color: #888; margin-bottom: 8px; text-transform: uppercase; }
+        .auth-form input { width: 100%; padding: 14px 16px; border-radius: var(--radius); border: 1px solid #333; background: #121212; font-size: 16px; outline: none; transition: border-color 0.3s; color: white; }
+        .auth-form input:focus { border-color: var(--primary); }
+        .auth-btn { width: 100%; padding: 16px; border-radius: var(--radius); border: none; background: var(--primary); color: var(--dark); font-size: 16px; font-weight: 700; cursor: pointer; transition: opacity 0.3s; }
+        .auth-btn:hover { opacity: 0.9; }
+        .auth-toggle { text-align: center; margin-top: 24px; font-size: 14px; color: #888; }
+        .auth-toggle a { color: var(--primary); font-weight: 700; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <div class="auth-card">
+        <header class="auth-header">
+            <h1>Partner Login</h1>
+            <p>Welcome back, Partner</p>
+        </header>
+
+        <form id="auth-form" class="auth-form">
+            <div class="input-group">
+                <label for="phone">Phone Number</label>
+                <input type="tel" id="phone" placeholder="9876543210" required>
+            </div>
+            <div class="input-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" placeholder="••••••••" required>
+            </div>
+            <button type="submit" class="auth-btn">Login to Dashboard</button>
+        </form>
+
+        <div class="auth-toggle">
+            <span>Want to partner with us?</span>
+            <a href="driver-register.html">Register Now</a>
+        </div>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script>
+        const authForm = document.getElementById('auth-form');
+
+        authForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const payload = {
+                phone: document.getElementById('phone').value,
+                password: document.getElementById('password').value
+            };
+
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/driver/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (data.success) {
+                    localStorage.setItem('cityride_pilot', JSON.stringify(data.user));
+                    window.location.href = 'driver.html';
+                } else {
+                    alert(data.error || 'Login failed.');
+                }
+            } catch (err) {
+                alert('Network error.');
+            }
+        });
+    </script>
+</body>
+</html>

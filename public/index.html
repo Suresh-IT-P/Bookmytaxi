@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BookMyTaxi Cabs | Book a Ride</title>
+    <meta name="description" content="Book a taxi with BookMyTaxi. Fast, reliable and affordable cab booking service.">
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+</head>
+<body>
+    <div id="app" class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <header class="sidebar-header">
+                <div class="logo">
+                    <img src="assets/logo-black.png" alt="BookMyTaxi Logo" id="main-logo">
+                </div>
+                <nav class="top-nav">
+                    <button class="nav-item active" data-tab="daily">Daily</button>
+                    <button class="nav-item" data-tab="outstation">Outstation</button>
+                    <button class="nav-item" data-tab="rentals">Rentals</button>
+                    <a href="dashboard.html" id="top-dashboard-btn" style="display: none; margin-left: 10px; padding: 6px 14px; background: #ffd000; border-radius: 20px; text-decoration: none; color: black; font-weight: 700; font-size: 0.8rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">My Rides</a>
+                </nav>
+            </header>
+
+            <main class="sidebar-content">
+                <div class="booking-flow">
+                    <div class="input-section">
+                        <div class="input-wrapper">
+                            <div class="input-icon">
+                                <div class="dot-green"></div>
+                            </div>
+                            <div class="input-field">
+                                <label for="pickup">Pickup</label>
+                                <input type="text" id="pickup" placeholder="Enter pickup location" autocomplete="off">
+                                <div id="pickup-suggestions" class="suggestions"></div>
+                            </div>
+                            <button class="location-btn" id="current-location-btn" title="Use current location">
+                                <svg viewBox="0 0 24 24" width="20" height="20"><path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3c-.46-4.17-3.77-7.48-7.94-7.94V1h-2v2.06C6.83 3.52 3.52 6.83 3.06 11H1v2h2.06c.46 4.17 3.77 7.48 7.94 7.94V23h2v-2.06c4.17-.46 7.48-3.77 7.94-7.94H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z" fill="currentColor"/></svg>
+                            </button>
+                        </div>
+                        <div class="input-connector"></div>
+                        <div class="input-wrapper" id="drop-wrapper">
+                            <div class="input-icon">
+                                <div class="dot-red"></div>
+                            </div>
+                            <div class="input-field">
+                                <label for="drop">Drop</label>
+                                <input type="text" id="drop" placeholder="Enter destination" autocomplete="off">
+                                <div id="drop-suggestions" class="suggestions"></div>
+                            </div>
+                            <button class="location-btn" id="map-picker-btn" title="Pick on map">
+                                <svg viewBox="0 0 24 24" width="20" height="20"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill="currentColor"/></svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="schedule-section">
+                        <button class="schedule-btn active">Leave Now</button>
+                        <button class="schedule-btn">Schedule for later</button>
+                    </div>
+
+                    <div id="rental-pkg-container" class="rental-pkg-section hidden">
+                        <label>Select Rental Package</label>
+                        <div class="pkg-selector">
+                            <button class="pkg-btn active" data-pkg="2-20">2hr / 20km</button>
+                            <button class="pkg-btn" data-pkg="4-40">4hr / 40km</button>
+                            <button class="pkg-btn" data-pkg="8-80">8hr / 80km</button>
+                            <button class="pkg-btn" data-pkg="12-120">12hr / 120km</button>
+                        </div>
+                    </div>
+
+                    <div id="vehicle-list" class="vehicle-list">
+                        <div class="placeholder-text">Enter locations to see available rides</div>
+                    </div>
+                </div>
+            </main>
+
+            <footer class="sidebar-footer">
+                <div id="selected-vehicle-summary" class="hidden">
+                    <div class="fare-info">
+                        <span class="total-fare" id="display-fare">₹0</span>
+                        <span class="fare-details">incl. taxes</span>
+                    </div>
+                    <button class="confirm-btn" id="book-btn">Confirm Booking</button>
+                </div>
+                <div class="auth-footer" id="auth-links">
+                    <a href="auth.html">Login</a>
+                    <span class="divider">|</span>
+                    <a href="driver-login.html">Driver Panel</a>
+                    <span class="divider">|</span>
+                    <a href="admin-login.html">Admin</a>
+                </div>
+            </footer>
+        </aside>
+
+        <!-- Map Container -->
+        <section id="map-container" class="map-container">
+            <div id="map"></div>
+            <div class="map-overlay">
+                <div class="search-floating">
+                    <input type="text" placeholder="Search for places..." id="map-search">
+                </div>
+            </div>
+        </section>
+
+        <!-- Modals -->
+        <div id="modal-container" class="modal-overlay hidden">
+            <div class="modal">
+                <header class="modal-header">
+                    <h2 id="modal-title">Confirm Booking</h2>
+                    <button class="close-modal">&times;</button>
+                </header>
+                <div class="modal-content" id="modal-content">
+                    <!-- Dynamic Content -->
+                </div>
+                <footer class="modal-footer">
+                    <button class="btn btn-secondary" id="modal-cancel">Cancel</button>
+                    <button class="btn btn-primary" id="modal-confirm">Confirm</button>
+                </footer>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="js/config.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

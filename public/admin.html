@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Command Center | BookMyTaxi Cabs</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { background: #0a0a0a; color: white; margin: 0; }
+        .admin-layout { display: flex; height: 100vh; overflow: hidden; }
+        .sidebar-nav { width: 260px; background: #111; padding: 40px 20px; border-right: 1px solid #222; flex-shrink: 0; transition: all 0.3s; }
+        .sidebar-nav h1 { font-size: 18px; margin-bottom: 40px; color: var(--primary); letter-spacing: 2px; }
+        .nav-container { display: flex; flex-direction: column; gap: 8px; }
+        .nav-link { display: block; padding: 12px 16px; color: #888; text-decoration: none; border-radius: 8px; font-weight: 600; transition: all 0.3s; cursor: pointer; }
+        .nav-link:hover, .nav-link.active { background: #222; color: white; }
+        
+        .main-content { flex: 1; padding: 40px; overflow-y: auto; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; animation: fadeIn 0.3s; }
+        
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; margin-bottom: 40px; }
+        .stat-box { background: #1a1a1a; padding: 24px; border-radius: 16px; border: 1px solid #222; }
+        .stat-box h3 { font-size: 12px; color: #666; margin-bottom: 8px; text-transform: uppercase; }
+        .stat-box .val { font-size: 28px; font-weight: 800; }
+        
+        .table-card { background: #1a1a1a; border-radius: 16px; border: 1px solid #222; padding: 24px; overflow: hidden; margin-bottom: 40px; }
+        .table-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .table-wrapper { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; min-width: 600px; }
+        th { text-align: left; padding: 12px; color: #666; font-size: 12px; text-transform: uppercase; border-bottom: 1px solid #222; }
+        td { padding: 12px; border-bottom: 1px solid #222; font-size: 14px; color: #ccc; }
+        
+        .badge-status { padding: 4px 10px; border-radius: 4px; font-size: 10px; font-weight: 800; text-transform: uppercase; }
+        .status-pending { background: #332200; color: #ffaa00; }
+        .status-assigned { background: #002244; color: #00aaff; }
+        .status-completed { background: #003311; color: #00cc44; }
+        .status-cancelled { background: #330000; color: #ff4444; }
+
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; font-size: 12px; color: #666; margin-bottom: 8px; }
+        .form-group input { width: 100%; padding: 12px; background: #0a0a0a; border: 1px solid #333; color: white; border-radius: 8px; }
+
+        @media (max-width: 768px) {
+            .admin-layout { flex-direction: column; height: auto; overflow: visible; }
+            .sidebar-nav { width: 100%; height: auto; border-right: none; border-bottom: 1px solid #222; padding: 20px; }
+            .nav-container { flex-direction: row; overflow-x: auto; padding-bottom: 10px; }
+            .nav-link { white-space: nowrap; margin-bottom: 0; }
+            .main-content { padding: 20px; }
+            .stats-row { grid-template-columns: 1fr 1fr; }
+            .logout-wrap { display: none; }
+            .mobile-logout { display: block !important; }
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-layout">
+        <aside class="sidebar-nav">
+            <h1>BookMyTaxi ADMIN</h1>
+            <div class="nav-container">
+                <div class="nav-link active" data-tab="dashboard">Dashboard</div>
+                <div class="nav-link" data-tab="rides">Rides</div>
+                <div class="nav-link" data-tab="drivers">Drivers</div>
+                <div class="nav-link" data-tab="customers">Customers</div>
+                <div class="nav-link" data-tab="settings">Tariffs</div>
+                <div class="nav-link mobile-logout" onclick="logout()" style="display:none; color:#ff5252;">Logout</div>
+            </div>
+            <div class="logout-wrap" style="margin-top: auto; padding-top: 40px; border-top: 1px solid #222;">
+                <button onclick="logout()" style="background:none; border:none; color:#ff5252; cursor:pointer; font-weight:700;">Logout</button>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <!-- Dashboard Tab -->
+            <section id="dashboard" class="tab-content active">
+                <header style="margin-bottom: 40px;">
+                    <h2>Executive Summary</h2>
+                    <p style="color: #666;">Platform performance at a glance</p>
+                </header>
+
+                <div class="stats-row">
+                    <div class="stat-box"><h3>Revenue</h3><div class="val" id="d-revenue">₹0</div></div>
+                    <div class="stat-box"><h3>Rides</h3><div class="val" id="d-rides">0</div></div>
+                    <div class="stat-box"><h3>Drivers</h3><div class="val" id="d-drivers">0</div></div>
+                    <div class="stat-box"><h3>Users</h3><div class="val" id="d-users">0</div></div>
+                </div>
+
+                <div class="table-card">
+                    <h3>Recent Activity</h3>
+                    <div class="table-wrapper">
+                        <table id="recent-bookings-table">
+                            <thead><tr><th>ID</th><th>Customer</th><th>Route</th><th>Status</th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Rides Tab -->
+            <section id="rides" class="tab-content">
+                <header style="margin-bottom: 40px;"><h2>Ride Management</h2></header>
+                <div class="table-card">
+                    <div class="table-wrapper">
+                        <table id="all-rides-table">
+                            <thead><tr><th>ID</th><th>Customer</th><th>Driver</th><th>Fare</th><th>Status</th><th>Odometer</th><th>Track / Date</th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Drivers Tab -->
+            <section id="drivers" class="tab-content">
+                <header style="margin-bottom: 40px;"><h2>Fleet Partners</h2></header>
+                <div class="table-card">
+                    <div class="table-wrapper">
+                        <table id="all-drivers-table">
+                            <thead><tr><th>ID</th><th>Name</th><th>Phone</th><th>Vehicle</th><th>Balance</th><th>Status</th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Customers Tab -->
+            <section id="customers" class="tab-content">
+                <header style="margin-bottom: 40px;"><h2>Registered Users</h2></header>
+                <div class="table-card">
+                    <div class="table-wrapper">
+                        <table id="all-customers-table">
+                            <thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Phone</th><th>Joined</th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Settings Tab -->
+            <section id="settings" class="tab-content">
+                <header style="margin-bottom: 40px;"><h2>Tariff Configuration</h2></header>
+                <div id="tariff-list"></div>
+            </section>
+        </main>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script>
+        // Authentication
+        const admin = JSON.parse(localStorage.getItem('cityride_master'));
+        if (!admin) window.location.href = 'admin-login.html';
+
+        // Tab Logic
+        const navLinks = document.querySelectorAll('.nav-link');
+        const tabs = document.querySelectorAll('.tab-content');
+
+        navLinks.forEach(link => {
+            link.addEventListener('click', () => {
+                if (link.classList.contains('mobile-logout')) return;
+                navLinks.forEach(l => l.classList.remove('active'));
+                tabs.forEach(t => t.classList.remove('active'));
+                
+                link.classList.add('active');
+                const tabId = link.dataset.tab;
+                document.getElementById(tabId).classList.add('active');
+                
+                loadTabData(tabId);
+            });
+        });
+
+        // Data Loading
+        async function loadTabData(tabId) {
+            switch(tabId) {
+                case 'dashboard': loadDashboard(); break;
+                case 'rides': loadRides(); break;
+                case 'drivers': loadDrivers(); break;
+                case 'customers': loadCustomers(); break;
+                case 'settings': loadTariffs(); break;
+            }
+        }
+
+        async function loadDashboard() {
+            const stats = await fetch(`${API_BASE_URL}/api/admin/stats`).then(r => r.json());
+            document.getElementById('d-revenue').textContent = `₹${stats.revenue.toLocaleString()}`;
+            document.getElementById('d-rides').textContent = stats.totalBookings;
+            document.getElementById('d-drivers').textContent = stats.totalDrivers;
+            document.getElementById('d-users').textContent = stats.totalUsers;
+
+            const bookings = await fetch(`${API_BASE_URL}/api/admin/bookings`).then(r => r.json());
+            const tbody = document.querySelector('#recent-bookings-table tbody');
+            tbody.innerHTML = bookings.slice(0, 5).map(b => `
+                <tr>
+                    <td>#B${b.id}</td>
+                    <td>${b.customer_name || 'Guest'}</td>
+                    <td>${b.pickup_loc.substring(0, 30)}...</td>
+                    <td><span class="badge-status status-${b.status}">${b.status}</span></td>
+                </tr>
+            `).join('');
+        }
+
+        async function loadRides() {
+            const bookings = await fetch(`${API_BASE_URL}/api/admin/bookings`).then(r => r.json());
+            const tbody = document.querySelector('#all-rides-table tbody');
+            tbody.innerHTML = bookings.map(b => `
+                <tr>
+                    <td>#B${b.id}</td>
+                    <td>${b.customer_name || 'Guest'}</td>
+                    <td>${b.driver_name || '---'}</td>
+                    <td>${b.fare}</td>
+                    <td>
+                        <span class="badge-status status-${b.status}">${b.status}</span>
+                        ${b.status === 'assigned' ? `<br><small style="color:#ffd000">OTP: ${b.journey_otp}</small>` : ''}
+                    </td>
+                    <td>
+                        <div style="font-size:11px; color:#888;">
+                            S: ${b.start_odometer || '---'}<br>
+                            E: ${b.end_odometer || '---'}
+                        </div>
+                    </td>
+                    <td>
+                        <div style="font-size:11px;">
+                            ${new Date(b.created_at).toLocaleDateString()}<br>
+                            ${['assigned', 'ongoing'].includes(b.status) ? `<a href="https://www.google.com/maps/dir/?api=1&origin=${b.pickup_coords.split(',').reverse().join(',')}&destination=${b.drop_coords.split(',').reverse().join(',')}" target="_blank" style="color:var(--primary); text-decoration:none;">Track Map</a>` : ''}
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        async function loadDrivers() {
+            const drivers = await fetch(`${API_BASE_URL}/api/admin/drivers`).then(r => r.json());
+            const tbody = document.querySelector('#all-drivers-table tbody');
+            tbody.innerHTML = drivers.map(d => `
+                <tr>
+                    <td>#D${d.id}</td>
+                    <td>${d.name}</td>
+                    <td>${d.phone}</td>
+                    <td>${d.car_model} (${d.vehicle_type})</td>
+                    <td>₹${parseFloat(d.wallet_balance).toFixed(2)}</td>
+                    <td>
+                        <button onclick="manageWallet(${d.id}, '${d.name}', ${d.wallet_balance})" style="padding:4px 8px; border-radius:4px; border:1px solid #444; background:#222; color:white; cursor:pointer; font-size:10px;">Wallet +/-</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        async function loadCustomers() {
+            const customers = await fetch(`${API_BASE_URL}/api/admin/passengers`).then(r => r.json());
+            const tbody = document.querySelector('#all-customers-table tbody');
+            tbody.innerHTML = customers.map(c => `
+                <tr>
+                    <td>#U${c.id}</td>
+                    <td>${c.name}</td>
+                    <td>${c.email}</td>
+                    <td>${c.phone}</td>
+                    <td>${new Date(c.created_at).toLocaleDateString()}</td>
+                </tr>
+            `).join('');
+        }
+
+        async function loadTariffs() {
+            const tariffs = await fetch(`${API_BASE_URL}/api/admin/tariffs`).then(r => r.json());
+            const container = document.getElementById('tariff-list');
+            container.innerHTML = tariffs.map(t => {
+                const config = typeof t.config === 'string' ? JSON.parse(t.config) : t.config;
+                return `
+                    <div class="table-card">
+                        <h3>${t.vehicle_type.toUpperCase()} - ${t.category.toUpperCase()}</h3>
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px;">
+                            <div class="form-group">
+                                <label>Base Fare (₹)</label>
+                                <input type="number" value="${config.base || config['2-20']?.base || 0}" id="base-${t.id}">
+                            </div>
+                            <div class="form-group">
+                                <label>Per KM Fare (₹)</label>
+                                <input type="number" value="${config.perKm || 0}" id="km-${t.id}">
+                            </div>
+                        </div>
+                        <button class="btn btn-primary" onclick="updateTariff(${t.id})" style="padding: 10px 20px;">Update ${t.vehicle_type}</button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function updateTariff(id) {
+            const base = document.getElementById(`base-${id}`).value;
+            const km = document.getElementById(`km-${id}`).value;
+            const res = await fetch(`${API_BASE_URL}/api/admin/tariffs/update`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id, config: { base: parseFloat(base), perKm: parseFloat(km) } })
+            });
+            if (res.ok) alert('Tariff updated successfully!');
+        }
+
+        async function manageWallet(id, name, current) {
+            const amount = prompt(`Manage Wallet for ${name}\nCurrent Balance: ₹${parseFloat(current).toFixed(2)}\n\nEnter amount to add (use negative for deduction):`, "0");
+            if (!amount || isNaN(amount) || parseFloat(amount) === 0) return;
+            
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/admin/drivers/update-wallet`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ driverId: id, amount: parseFloat(amount) })
+                });
+                if (res.ok) {
+                    alert('Wallet updated successfully!');
+                    loadDrivers();
+                } else {
+                    alert('Update failed');
+                }
+            } catch (e) {
+                alert('Connection error');
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('cityride_master');
+            window.location.href = 'admin-login.html';
+        }
+
+        // Init
+        loadDashboard();
+    </script>
+</body>
+</html>

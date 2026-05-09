@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login | BookMyTaxi Cabs</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { background: #0a0a0a; display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; overflow-y: auto; color: white; }
+        .auth-card { background: #1a1a1a; width: 100%; max-width: 400px; padding: 40px; border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.8); border: 1px solid #333; }
+        .auth-header { text-align: center; margin-bottom: 30px; }
+        .auth-header h1 { font-size: 24px; font-weight: 800; color: #fff; letter-spacing: 2px; }
+        .auth-form .input-group { margin-bottom: 20px; }
+        .auth-form label { display: block; font-size: 11px; font-weight: 700; color: #666; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; }
+        .auth-form input { width: 100%; padding: 14px 16px; border-radius: 8px; border: 1px solid #333; background: #0a0a0a; font-size: 16px; outline: none; transition: all 0.3s; color: white; }
+        .auth-form input:focus { border-color: #555; background: #111; }
+        .auth-btn { width: 100%; padding: 16px; border-radius: 8px; border: none; background: white; color: black; font-size: 16px; font-weight: 800; cursor: pointer; transition: all 0.3s; text-transform: uppercase; }
+        .auth-btn:hover { background: #eee; transform: translateY(-2px); }
+    </style>
+</head>
+<body>
+    <div class="auth-card">
+        <header class="auth-header">
+            <h1>ADMIN CONTROL</h1>
+            <p style="color: #666; font-size: 12px; margin-top: 8px;">Authorized Personnel Only</p>
+        </header>
+
+        <form id="auth-form" class="auth-form">
+            <div class="input-group">
+                <label for="email">Admin Email</label>
+                <input type="email" id="email" placeholder="admin@BookMyTaxi.com" required>
+            </div>
+            <div class="input-group">
+                <label for="password">Access Key</label>
+                <input type="password" id="password" placeholder="••••••••" required>
+            </div>
+            <button type="submit" class="auth-btn">Enter Mainframe</button>
+        </form>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script>
+        const authForm = document.getElementById('auth-form');
+
+        authForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const payload = {
+                email: document.getElementById('email').value,
+                password: document.getElementById('password').value
+            };
+
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/admin/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (data.success) {
+                    localStorage.setItem('cityride_master', JSON.stringify(data.user));
+                    window.location.href = 'admin.html';
+                } else {
+                    alert(data.error || 'Access Denied.');
+                }
+            } catch (err) {
+                alert('Network error.');
+            }
+        });
+    </script>
+</body>
+</html>

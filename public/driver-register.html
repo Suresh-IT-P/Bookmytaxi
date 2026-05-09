@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Partner Registration | BookMyTaxi Cabs</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { background: var(--dark); display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; overflow-y: auto; color: white; }
+        .reg-card { background: var(--dark-grey); width: 100%; max-width: 600px; padding: 40px; border-radius: 20px; box-shadow: var(--shadow); }
+        .reg-header { text-align: center; margin-bottom: 30px; }
+        .reg-header h1 { color: var(--primary); font-size: 28px; }
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .full-width { grid-column: span 2; }
+        .input-group { margin-bottom: 20px; }
+        label { display: block; font-size: 11px; font-weight: 700; color: #888; margin-bottom: 8px; text-transform: uppercase; }
+        input, select { width: 100%; padding: 12px 16px; border-radius: 8px; border: 1px solid #333; background: #0a0a0a; color: white; outline: none; }
+        .submit-btn { width: 100%; padding: 16px; border-radius: 8px; border: none; background: var(--primary); color: var(--dark); font-weight: 700; font-size: 16px; cursor: pointer; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="reg-card">
+        <header class="reg-header">
+            <h1>Partner with BookMyTaxi</h1>
+            <p>Start your journey as a Captain</p>
+        </header>
+
+        <form id="reg-form">
+            <div class="form-grid">
+                <div class="input-group">
+                    <label>Full Name</label>
+                    <input type="text" id="name" required>
+                </div>
+                <div class="input-group">
+                    <label>Phone Number</label>
+                    <input type="tel" id="phone" required>
+                </div>
+                <div class="input-group">
+                    <label>Email Address</label>
+                    <input type="email" id="email" required>
+                </div>
+                <div class="input-group">
+                    <label>Password</label>
+                    <input type="password" id="password" required>
+                </div>
+                <div class="input-group">
+                    <label>Car Model</label>
+                    <input type="text" id="car_model" placeholder="e.g. Maruti Swift" required>
+                </div>
+                <div class="input-group">
+                    <label>Vehicle Number</label>
+                    <input type="text" id="car_number" placeholder="KA 01 AB 1234" required>
+                </div>
+                <div class="input-group full-width">
+                    <label>Vehicle Type</label>
+                    <select id="vehicle_type">
+                        <option value="sedan">Mini / Sedan</option>
+                        <option value="suv">Prime SUV</option>
+                        <option value="bike">Bike</option>
+                    </select>
+                </div>
+            </div>
+            <button type="submit" class="submit-btn">Submit Application</button>
+        </form>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script>
+        const regForm = document.getElementById('reg-form');
+        regForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData();
+            formData.append('name', document.getElementById('name').value);
+            formData.append('phone', document.getElementById('phone').value);
+            formData.append('email', document.getElementById('email').value);
+            formData.append('password', document.getElementById('password').value);
+            formData.append('car_model', document.getElementById('car_model').value);
+            formData.append('car_number', document.getElementById('car_number').value);
+            formData.append('vehicle_type', document.getElementById('vehicle_type').value);
+
+            try {
+                // In this simplified version, we're using the standard register endpoint
+                // but the backend expects multi-step with docs. I'll use a simplified fetch here.
+                const res = await fetch(`${API_BASE_URL}/api/driver/register`, {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+                if (data.success) {
+                    alert('Application submitted! Please wait for admin approval.');
+                    window.location.href = 'driver-login.html';
+                } else {
+                    alert(data.error || 'Registration failed.');
+                }
+            } catch (err) {
+                alert('Network error.');
+            }
+        });
+    </script>
+</body>
+</html>
